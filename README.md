@@ -14,7 +14,7 @@ A tiny browser game: catch the good stuff, dodge the bombs.
 | Gold star | Star | Catch it: +5 |
 | Bomb | Bomb | Touch it and you lose a life |
 
-- You have 3 lives. A bomb costs one. So does every third face you miss.
+- You have 3 lives. A bomb costs one. So does every fifth face you miss.
 - Every 5 commits in a row raises your multiplier (up to ×5). Missing one or hitting a bomb resets it.
 - Everything gets faster the longer you survive. A new level starts every 12 seconds.
 

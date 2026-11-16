@@ -42,7 +42,7 @@
   let items = [], sparks = [], popups = [];
   let score = 0, lives = 3, streak = 0, time = 0, spawnIn = 0, shake = 0, overAt = 0;
   let missed = 0;                // faces missed since the last penalty
-  const MISS_LIMIT = 3;          // miss this many faces and you lose a life
+  const MISS_LIMIT = 5;          // miss this many faces and you lose a life
   let level = 1, banner = 0;     // banner: seconds left to show the big "Level N" text
   const LEVEL_EVERY = 12;
   let best = 0;
@@ -115,9 +115,9 @@
     // player follows pointer, or arrow keys
     if (keys.left || keys.right) {
       player.target = null;
-      player.x += ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * 720 * dt;
+      player.x += ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * 1100 * dt;
     } else if (player.target !== null) {
-      player.x += (player.target - player.x) * Math.min(1, dt * 22);
+      player.x += (player.target - player.x) * Math.min(1, dt * 45);   // snappy: almost glued to the finger
     }
     player.x = clamp(player.x, player.w / 2, W - player.w / 2);
 
