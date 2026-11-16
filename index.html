@@ -53,7 +53,7 @@
     W = innerWidth; H = innerHeight;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    player.w = clamp(W * 0.16, 90, 150);
+    player.w = clamp(W * 0.24, 130, 230);
     player.y = H - Math.max(60, H * 0.09);
     player.x = player.x ? clamp(player.x, player.w / 2, W - player.w / 2) : W / 2;
   }
