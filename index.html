@@ -95,7 +95,7 @@
     const type = r < 0.06 ? "star" : r < 0.10 ? "coffee" : r < 0.14 ? "boost" : r < 0.20 ? "conflict"
       : r < 0.20 + bugChance ? "bug" : "commit";
     const size = IMG[type] ? 36               // pictures are drawn bigger so a face is recognisable
-      : type === "bug" ? 16 : type === "star" || type === "conflict" ? 15 : 13;
+      : type === "bug" ? 25 : type === "star" || type === "conflict" ? 23 : 21;
     const speed = clamp(170 + time * 6, 170, 540) * rand(0.85, 1.2);
     items.push({ type, r: size, x: rand(size + 12, W - size - 12), y: -size, vy: speed,
       rot: rand(0, 6.28), wob: rand(0, 6.28), sway: type === "bug" ? rand(20, 70) : 0 });
@@ -146,7 +146,7 @@
       if (hit) {
         it.dead = true;
         if (it.type === "bug") {
-          lives--; streak = 0; shake = 14; burst(it.x, player.y, C.bug, 22); beep(110, 0.3, 0.12, "sawtooth");
+          lives--; streak = 0; shake = 14; burst(it.x, player.y, C.bug, 22); burst(it.x, player.y, "#ffb347", 22);   // explosion beep(110, 0.3, 0.12, "sawtooth");
           if (lives <= 0) { gameOver(); return; }
         } else if (it.type === "boost") {
           // boost: the paddle gets wider for a few seconds
@@ -177,7 +177,7 @@
         }
       } else if (!it.dead && it.y - it.r > H) {
         it.dead = true;
-        if (it.type === "commit") streak = 0;   // a missed commit breaks the streak
+        if (it.type === "commit") streak = 0;   // a missed catch breaks the streak
       }
     }
     items = items.filter(it => !it.dead);
@@ -243,19 +243,31 @@
       ctx.quadraticCurveTo(x + dx + sway, y - r * 1.2, x + dx - sway, y - r * 1.6); ctx.stroke();
     }
   }
-  function drawBug(it) {
-    if (IMG.bug) return drawPicture(it, IMG.bug, C.bug);
-    ctx.save(); ctx.translate(it.x, it.y);
-    ctx.strokeStyle = C.bug; ctx.lineWidth = 2.5; ctx.lineCap = "round";
-    const wig = Math.sin(it.wob * 2) * 3;
-    for (const side of [-1, 1]) for (let i = -1; i <= 1; i++) {     // six legs
-      ctx.beginPath(); ctx.moveTo(side * it.r * 0.5, i * 6);
-      ctx.lineTo(side * (it.r + 7), i * 9 + wig * side * (i || 1)); ctx.stroke();
-    }
-    ctx.fillStyle = C.bug;
-    ctx.beginPath(); ctx.ellipse(0, 0, it.r * 0.72, it.r, 0, 0, 6.29); ctx.fill();
-    ctx.fillStyle = C.bg;
-    ctx.beginPath(); ctx.arc(-4, -it.r * 0.45, 2.3, 0, 6.29); ctx.arc(4, -it.r * 0.45, 2.3, 0, 6.29); ctx.fill();
+  function drawBomb(it) {             // the thing to dodge: a bomb with a burning fuse
+    if (IMG.bug) return drawPicture(it, IMG.bug);
+    const r = it.r * 0.82;
+    ctx.save(); ctx.translate(it.x, it.y + it.r * 0.12); ctx.rotate(Math.sin(it.wob) * 0.15);
+    // fuse
+    ctx.strokeStyle = "#c9a36a"; ctx.lineWidth = Math.max(2.5, r * 0.14); ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(r * 0.45, -r * 0.8);
+    ctx.quadraticCurveTo(r * 0.75, -r * 1.4, r * 1.05, -r * 1.2); ctx.stroke();
+    // flickering spark at the end of the fuse
+    const fl = r * 0.34 * (0.75 + Math.sin(it.wob * 9) * 0.25);
+    ctx.save(); ctx.translate(r * 1.05, -r * 1.2); ctx.rotate(it.wob * 3);
+    ctx.fillStyle = "#ffd166"; ctx.shadowColor = "#ff9f43"; ctx.shadowBlur = 18;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * 6.283, rr = i % 2 ? fl * 0.4 : fl; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    ctx.closePath(); ctx.fill(); ctx.restore();
+    // cap
+    ctx.save(); ctx.translate(r * 0.45, -r * 0.82); ctx.rotate(0.5);
+    ctx.fillStyle = "#6a6663"; ctx.fillRect(-r * 0.26, -r * 0.17, r * 0.52, r * 0.34); ctx.restore();
+    // body
+    const g = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.05, 0, 0, r);
+    g.addColorStop(0, "#7d7975"); g.addColorStop(0.45, "#34312f"); g.addColorStop(1, "#161514");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.29); ctx.fill();
+    ctx.strokeStyle = C.bug; ctx.lineWidth = 2.5; ctx.stroke();          // red rim so it reads on the dark background
+    ctx.fillStyle = "rgba(255,255,255,.4)";
+    ctx.beginPath(); ctx.ellipse(-r * 0.4, -r * 0.42, r * 0.2, r * 0.11, -0.7, 0, 6.29); ctx.fill();
     ctx.restore();
   }
   function drawPlayer() {
@@ -289,7 +301,7 @@
     ctx.save();
     if (shake > 0) ctx.translate(rand(-shake, shake), rand(-shake, shake));
 
-    const DRAW = { commit: drawCommit, star: drawStar, bug: drawBug, coffee: drawCoffee, boost: drawBoost, conflict: drawConflict };
+    const DRAW = { commit: drawCommit, star: drawStar, bug: drawBomb, coffee: drawCoffee, boost: drawBoost, conflict: drawConflict };
     for (const it of items) DRAW[it.type](it);
     drawPlayer();
     for (const s of sparks) { ctx.globalAlpha = Math.max(0, s.life); ctx.fillStyle = s.color; ctx.fillRect(s.x - 2, s.y - 2, 4, 4); }
@@ -311,7 +323,7 @@
     } else if (state === "menu") {
       text("GİT LAKİ · DAY 1", W / 2, H * 0.3 - big, small * 0.8, C.frame, "center", SERIF, 400);
       text("Commit Catcher", W / 2, H * 0.3, big, C.text);
-      text("Catch the commits. Dodge the bugs.", W / 2, H * 0.3 + big * 0.9, small, C.muted, "center", SERIF, 400);
+      text("Catch the good stuff. Dodge the bombs.", W / 2, H * 0.3 + big * 0.9, small, C.muted, "center", SERIF, 400);
       text("Tap or press Space", W / 2, H * 0.62, small * 1.1, C.frameHi);
       if (best) text("Best: " + best, W / 2, H * 0.62 + small * 2.2, small, C.muted, "center", SERIF, 400);
     } else {
