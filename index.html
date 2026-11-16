@@ -184,12 +184,13 @@
   }
 
   // ---------- drawing ----------
-  function drawPicture(it, img, ring) {          // a round, centre-cropped picture with a coloured ring
-    const s = Math.min(img.naturalWidth, img.naturalHeight);
-    const sx = (img.naturalWidth - s) / 2, sy = (img.naturalHeight - s) / 2;
+  function drawPicture(it, img) {                // the picture as it is: no circle, no ring.
+    // Use a PNG with a transparent background and only the cut-out shape shows.
+    const scale = (it.r * 2.5) / Math.max(img.naturalWidth, img.naturalHeight);
+    const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
     ctx.save();
-    ctx.beginPath(); ctx.arc(it.x, it.y, it.r, 0, 6.29); ctx.clip();
-    ctx.drawImage(img, sx, sy, s, s, it.x - it.r, it.y - it.r, it.r * 2, it.r * 2);
+    ctx.translate(it.x, it.y); ctx.rotate(Math.sin(it.wob * 0.5) * 0.12);    // a gentle wobble while falling
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
     ctx.restore();
   }
   function drawCommit(it) {
