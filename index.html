@@ -26,6 +26,17 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const rand = (a, b) => a + Math.random() * (b - a);
 
+  // Optional custom pictures. Put these files next to index.html and they replace the drawings:
+  //   face.png  -> falls instead of the green commit ring
+  //   enemy.png -> falls instead of the red bug
+  // If a file is missing, the game just uses the normal drawing.
+  const IMG = {};
+  for (const [type, src] of [["commit", "face.png"], ["bug", "enemy.png"]]) {
+    const im = new Image();
+    im.onload = () => { IMG[type] = im; };
+    im.src = src;
+  }
+
   let W = 0, H = 0;
   const player = { x: 0, y: 0, w: 120, h: 14, target: null };
   let state = "menu";            // menu | play | over
@@ -83,7 +94,8 @@
     // 6% star, 4% coffee, 4% boost, 6% merge conflict, then bugs, the rest are commits
     const type = r < 0.06 ? "star" : r < 0.10 ? "coffee" : r < 0.14 ? "boost" : r < 0.20 ? "conflict"
       : r < 0.20 + bugChance ? "bug" : "commit";
-    const size = type === "bug" ? 16 : type === "star" || type === "conflict" ? 15 : 13;
+    const size = IMG[type] ? 24                 // pictures are drawn bigger so a face is recognisable
+      : type === "bug" ? 16 : type === "star" || type === "conflict" ? 15 : 13;
     const speed = clamp(170 + time * 6, 170, 540) * rand(0.85, 1.2);
     items.push({ type, r: size, x: rand(size + 12, W - size - 12), y: -size, vy: speed,
       rot: rand(0, 6.28), wob: rand(0, 6.28), sway: type === "bug" ? rand(20, 70) : 0 });
@@ -172,7 +184,18 @@
   }
 
   // ---------- drawing ----------
+  function drawPicture(it, img, ring) {          // a round, centre-cropped picture with a coloured ring
+    const s = Math.min(img.naturalWidth, img.naturalHeight);
+    const sx = (img.naturalWidth - s) / 2, sy = (img.naturalHeight - s) / 2;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(it.x, it.y, it.r, 0, 6.29); ctx.clip();
+    ctx.drawImage(img, sx, sy, s, s, it.x - it.r, it.y - it.r, it.r * 2, it.r * 2);
+    ctx.restore();
+    ctx.strokeStyle = ring; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.arc(it.x, it.y, it.r, 0, 6.29); ctx.stroke();
+  }
   function drawCommit(it) {
+    if (IMG.commit) return drawPicture(it, IMG.commit, C.commit);
     ctx.strokeStyle = "rgba(88,214,141,.25)"; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(it.x, it.y - it.r - 26); ctx.lineTo(it.x, it.y - it.r); ctx.stroke();
     ctx.fillStyle = C.bg; ctx.strokeStyle = C.commit; ctx.lineWidth = 4;
@@ -222,6 +245,7 @@
     }
   }
   function drawBug(it) {
+    if (IMG.bug) return drawPicture(it, IMG.bug, C.bug);
     ctx.save(); ctx.translate(it.x, it.y);
     ctx.strokeStyle = C.bug; ctx.lineWidth = 2.5; ctx.lineCap = "round";
     const wig = Math.sin(it.wob * 2) * 3;
@@ -329,7 +353,7 @@
 
   // test hook
   window.__game = { start, update, get s() { return { state, score, lives, streak, time, level, wide, w: player.w, items: items.length, W, H }; },
-    player, get items() { return items; } };
+    player, IMG, get items() { return items; } };
 })();
 </script>
 </body>
