@@ -11,7 +11,7 @@ A tiny browser game: catch the good stuff, dodge the bombs.
 | Falling thing | What it is | What happens |
 |---|---|---|
 | Green ring | Commit | Catch it: +1 |
-| Gold star | Star | Catch it: +5 |
+| Pink heart | Heart | Rare. Catch it: one life back |
 | Bomb | Bomb | Touch it and you lose a life |
 
 - You have 3 lives. A bomb costs one. So does every fifth face you miss.
