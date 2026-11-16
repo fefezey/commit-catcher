@@ -41,6 +41,8 @@
   let state = "menu";            // menu | play | over
   let items = [], sparks = [], popups = [];
   let score = 0, lives = 3, streak = 0, time = 0, spawnIn = 0, shake = 0, overAt = 0;
+  let missed = 0;                // faces missed since the last penalty
+  const MISS_LIMIT = 3;          // miss this many faces and you lose a life
   let level = 1, banner = 0;     // banner: seconds left to show the big "Level N" text
   const LEVEL_EVERY = 12;
   let best = 0;
@@ -76,7 +78,7 @@
   function start() {
     state = "play"; items = []; sparks = []; popups = [];
     score = 0; lives = 3; streak = 0; time = 0; spawnIn = 0.6; shake = 0;
-    level = 1; banner = 0;
+    level = 1; banner = 0; missed = 0;
     beep(520, 0.1); setTimeout(() => beep(780, 0.12), 90);
   }
 
@@ -88,10 +90,10 @@
 
   let lastType = "", sameRun = 0;
   function spawn() {
-    // A balanced mix from the very first second: about 8% stars, 42% bombs (up to 48% later), the rest faces.
+    // A balanced mix from the very first second: about 4% stars, 42% bombs (up to 48% later), the rest faces.
     const bugChance = clamp(0.42 + time * 0.002, 0.42, 0.48);
     const r = Math.random();
-    let type = r < 0.08 ? "star" : r < 0.08 + bugChance ? "bug" : "commit";
+    let type = r < 0.04 ? "star" : r < 0.04 + bugChance ? "bug" : "commit";
     // never more than two of the same thing in a row, so it can't rain only faces or only bombs
     if (type === lastType && sameRun >= 2) type = type === "commit" ? "bug" : "commit";
     sameRun = type === lastType ? sameRun + 1 : 1; lastType = type;
@@ -155,7 +157,18 @@
         }
       } else if (!it.dead && it.y - it.r > H) {
         it.dead = true;
-        if (it.type === "commit") streak = 0;   // a missed catch breaks the streak
+        if (it.type === "commit") {             // a missed face: breaks the streak and counts toward a lost life
+          streak = 0; missed++;
+          if (missed >= MISS_LIMIT) {
+            missed = 0; lives--; shake = 10;
+            popups.push({ x: clamp(it.x, 40, W - 40), y: H - 40, text: "-♥", life: 1.2, color: C.bug });
+            beep(140, 0.3, 0.12, "sawtooth");
+            if (lives <= 0) { gameOver(); return; }
+          } else {
+            popups.push({ x: clamp(it.x, 50, W - 50), y: H - 40, text: "missed", life: 0.8, color: C.muted });
+            beep(220, 0.08, 0.05);
+          }
+        }
       }
     }
     items = items.filter(it => !it.dead);
@@ -258,6 +271,11 @@
       if (mult() > 1) text("×" + mult(), 24, 80, 20, C.star, "left");
       for (let i = 0; i < 3; i++) drawHeart(W - 30 - i * 32, 40, 12, i < lives);
       text("Level " + level, W - 20, 74, 16, C.muted, "right", SERIF, 400);
+      for (let i = 0; i < MISS_LIMIT; i++) {            // missed-face pips: fill up, then cost a life
+        ctx.beginPath(); ctx.arc(W - 26 - i * 16, 100, 5, 0, 6.29);
+        if (i < missed) { ctx.fillStyle = C.bug; ctx.fill(); }
+        else { ctx.strokeStyle = "rgba(255,255,255,.25)"; ctx.lineWidth = 1.5; ctx.stroke(); }
+      }
       if (banner > 0) {
         ctx.globalAlpha = Math.min(1, banner);
         text("Level " + level, W / 2, H * 0.32, big, C.frameHi);
@@ -306,7 +324,7 @@
   requestAnimationFrame(frame);
 
   // test hook
-  window.__game = { start, update, get s() { return { state, score, lives, streak, time, level, w: player.w, items: items.length, W, H }; },
+  window.__game = { start, update, get s() { return { state, score, lives, streak, time, level, missed, w: player.w, items: items.length, W, H }; },
     player, IMG, get items() { return items; } };
 })();
 </script>
