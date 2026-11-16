@@ -13,10 +13,13 @@ A tiny browser game: catch the commits, dodge the bugs.
 | Green ring | Commit | Catch it: +1 |
 | Gold star | Star | Catch it: +5 |
 | Red bug | Bug | Touch it and you lose a life |
+| Blue cup | Coffee | Catch it: one life back |
+| Teal arrow | Boost | Catch it: wider paddle for 8 seconds |
+| Orange diamond | Merge conflict | Touch it and your multiplier resets to ×1 |
 
 - You have 3 lives.
 - Every 5 commits in a row raises your multiplier (up to ×5). Missing a commit or hitting a bug resets it.
-- Everything gets faster the longer you survive.
+- Everything gets faster the longer you survive. A new level starts every 12 seconds.
 
 **Controls:** move with the mouse, a finger, or the arrow keys. Tap or press Space to start.
 
