@@ -92,7 +92,7 @@
     // 6% star, then bombs, the rest are the things you catch
     const type = r < 0.06 ? "star" : r < 0.06 + bugChance ? "bug" : "commit";
     const size = IMG[type] ? 36               // pictures are drawn bigger so a face is recognisable
-      : type === "bug" ? 36 : type === "star" ? 23 : 21;
+      : type === "bug" ? 30 : type === "star" ? 23 : 21;
     const speed = clamp(170 + time * 6, 170, 540) * rand(0.85, 1.2);
     items.push({ type, r: size, x: rand(size + 12, W - size - 12), y: -size, vy: speed,
       rot: rand(0, 6.28), wob: rand(0, 6.28), sway: type === "bug" ? rand(20, 70) : 0 });
@@ -187,7 +187,7 @@
   }
   function drawBomb(it) {             // the thing to dodge: a bomb with a burning fuse
     if (IMG.bug) return drawPicture(it, IMG.bug);
-    const r = it.r * 1.15;                      // drawn about as big as a face picture
+    const r = it.r * 0.95;
     ctx.save(); ctx.translate(it.x, it.y + it.r * 0.12); ctx.rotate(Math.sin(it.wob) * 0.15);
     // fuse
     ctx.strokeStyle = "#c9a36a"; ctx.lineWidth = Math.max(2.5, r * 0.14); ctx.lineCap = "round";
