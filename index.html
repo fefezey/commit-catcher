@@ -191,8 +191,6 @@
     ctx.beginPath(); ctx.arc(it.x, it.y, it.r, 0, 6.29); ctx.clip();
     ctx.drawImage(img, sx, sy, s, s, it.x - it.r, it.y - it.r, it.r * 2, it.r * 2);
     ctx.restore();
-    ctx.strokeStyle = ring; ctx.lineWidth = 3.5;
-    ctx.beginPath(); ctx.arc(it.x, it.y, it.r, 0, 6.29); ctx.stroke();
   }
   function drawCommit(it) {
     if (IMG.commit) return drawPicture(it, IMG.commit, C.commit);
