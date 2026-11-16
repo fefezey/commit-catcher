@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0a09">
+<title>Commit Catcher</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0a09; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; cursor: none;
+    user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(() => {
+  // ---------- setup ----------
+  const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+  const C = { bg: "#0b0a09", bg2: "#1b1715", frame: "#a38a77", frameHi: "#cdb8a6", text: "#f4ece1",
+    muted: "#8b7f78", commit: "#58d68d", star: "#f5c84c", bug: "#ff4a3d" };
+  const SERIF = 'Georgia, "Iowan Old Style", "Times New Roman", serif';
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  let W = 0, H = 0;
+  const player = { x: 0, y: 0, w: 120, h: 14, target: null };
+  let state = "menu";            // menu | play | over
+  let items = [], sparks = [], popups = [];
+  let score = 0, lives = 3, streak = 0, time = 0, spawnIn = 0, shake = 0, overAt = 0;
+  let best = 0;
+  try { best = +localStorage.getItem("commit-catcher.best") || 0; } catch {}
+
+  function resize() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = innerWidth; H = innerHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    player.w = clamp(W * 0.16, 90, 150);
+    player.y = H - Math.max(60, H * 0.09);
+    player.x = player.x ? clamp(player.x, player.w / 2, W - player.w / 2) : W / 2;
+  }
+  addEventListener("resize", resize); resize();
+
+  // ---------- sound ----------
+  let ac;
+  function beep(freq, dur = 0.08, vol = 0.07, type = "triangle") {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+      o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + dur);
+    } catch {}
+  }
+
+  // ---------- game ----------
+  const mult = () => Math.min(5, 1 + Math.floor(streak / 5));
+
+  function start() {
+    state = "play"; items = []; sparks = []; popups = [];
+    score = 0; lives = 3; streak = 0; time = 0; spawnIn = 0.6; shake = 0;
+    beep(520, 0.1); setTimeout(() => beep(780, 0.12), 90);
+  }
+
+  function gameOver() {
+    state = "over"; overAt = performance.now();
+    if (score > best) { best = score; try { localStorage.setItem("commit-catcher.best", String(best)); } catch {} }
+    [392, 330, 262].forEach((f, i) => setTimeout(() => beep(f, 0.22, 0.09), i * 140));
+  }
+
+  function spawn() {
+    const bugChance = clamp(0.22 + time * 0.004, 0.22, 0.42);
+    const r = Math.random();
+    const type = r < 0.06 ? "star" : r < 0.06 + bugChance ? "bug" : "commit";
+    const size = type === "bug" ? 16 : type === "star" ? 15 : 13;
+    const speed = clamp(170 + time * 6, 170, 540) * rand(0.85, 1.2);
+    items.push({ type, r: size, x: rand(size + 12, W - size - 12), y: -size, vy: speed,
+      rot: rand(0, 6.28), wob: rand(0, 6.28), sway: type === "bug" ? rand(20, 70) : 0 });
+  }
+
+  function burst(x, y, color, n = 14) {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, 6.28), s = rand(60, 260);
+      sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 80, life: 1, color });
+    }
+  }
+
+  function update(dt) {
+    // player follows pointer, or arrow keys
+    if (keys.left || keys.right) {
+      player.target = null;
+      player.x += ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * 720 * dt;
+    } else if (player.target !== null) {
+      player.x += (player.target - player.x) * Math.min(1, dt * 22);
+    }
+    player.x = clamp(player.x, player.w / 2, W - player.w / 2);
+
+    for (const s of sparks) { s.vy += 600 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt * 1.8; }
+    sparks = sparks.filter(s => s.life > 0);
+    for (const p of popups) { p.y -= 50 * dt; p.life -= dt * 1.4; }
+    popups = popups.filter(p => p.life > 0);
+    shake = Math.max(0, shake - dt * 30);
+
+    if (state !== "play") return;
+    time += dt;
+    spawnIn -= dt;
+    if (spawnIn <= 0) { spawn(); spawnIn = clamp(0.95 - time * 0.012, 0.3, 0.95) * rand(0.7, 1.3); }
+
+    for (const it of items) {
+      it.y += it.vy * dt; it.rot += dt * 2; it.wob += dt * 4;
+      if (it.sway) it.x = clamp(it.x + Math.sin(it.wob) * it.sway * dt, it.r, W - it.r);
+      const hit = !it.dead && it.y + it.r >= player.y && it.y - it.r <= player.y + player.h &&
+        Math.abs(it.x - player.x) <= player.w / 2 + it.r * 0.6;
+      if (hit) {
+        it.dead = true;
+        if (it.type === "bug") {
+          lives--; streak = 0; shake = 14; burst(it.x, player.y, C.bug, 22); beep(110, 0.3, 0.12, "sawtooth");
+          if (lives <= 0) { gameOver(); return; }
+        } else {
+          const pts = (it.type === "star" ? 5 : 1) * mult();
+          score += pts; streak++;
+          burst(it.x, player.y, it.type === "star" ? C.star : C.commit, it.type === "star" ? 24 : 10);
+          popups.push({ x: it.x, y: player.y - 16, text: "+" + pts, life: 1, color: it.type === "star" ? C.star : C.commit });
+          beep(it.type === "star" ? 1040 : 520 + Math.min(streak, 20) * 22, 0.09);
+        }
+      } else if (!it.dead && it.y - it.r > H) {
+        it.dead = true;
+        if (it.type === "commit") streak = 0;   // a missed commit breaks the streak
+      }
+    }
+    items = items.filter(it => !it.dead);
+  }
+
+  // ---------- drawing ----------
+  function drawCommit(it) {
+    ctx.strokeStyle = "rgba(88,214,141,.25)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(it.x, it.y - it.r - 26); ctx.lineTo(it.x, it.y - it.r); ctx.stroke();
+    ctx.fillStyle = C.bg; ctx.strokeStyle = C.commit; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(it.x, it.y, it.r - 2, 0, 6.29); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.commit; ctx.beginPath(); ctx.arc(it.x, it.y, 3.5, 0, 6.29); ctx.fill();
+  }
+  function drawStar(it) {
+    ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(it.rot);
+    ctx.fillStyle = C.star; ctx.shadowColor = C.star; ctx.shadowBlur = 16;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * 6.283 - 1.57, rr = i % 2 ? it.r * 0.45 : it.r;
+      ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function drawBug(it) {
+    ctx.save(); ctx.translate(it.x, it.y);
+    ctx.strokeStyle = C.bug; ctx.lineWidth = 2.5; ctx.lineCap = "round";
+    const wig = Math.sin(it.wob * 2) * 3;
+    for (const side of [-1, 1]) for (let i = -1; i <= 1; i++) {     // six legs
+      ctx.beginPath(); ctx.moveTo(side * it.r * 0.5, i * 6);
+      ctx.lineTo(side * (it.r + 7), i * 9 + wig * side * (i || 1)); ctx.stroke();
+    }
+    ctx.fillStyle = C.bug;
+    ctx.beginPath(); ctx.ellipse(0, 0, it.r * 0.72, it.r, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = C.bg;
+    ctx.beginPath(); ctx.arc(-4, -it.r * 0.45, 2.3, 0, 6.29); ctx.arc(4, -it.r * 0.45, 2.3, 0, 6.29); ctx.fill();
+    ctx.restore();
+  }
+  function drawPlayer() {
+    const x = player.x - player.w / 2, y = player.y, w = player.w, h = player.h;
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, C.frameHi); g.addColorStop(1, C.frame);
+    ctx.fillStyle = g; ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = C.bg; ctx.strokeStyle = C.frameHi; ctx.lineWidth = 3;   // branch nodes at both ends
+    for (const nx of [x + 4, x + w - 4]) { ctx.beginPath(); ctx.arc(nx, y + h / 2, 9, 0, 6.29); ctx.fill(); ctx.stroke(); }
+  }
+  function text(str, x, y, size, color, align = "center", font = SERIF, weight = 700) {
+    ctx.font = `${weight} ${size}px ${font}`; ctx.fillStyle = color; ctx.textAlign = align;
+    ctx.textBaseline = "middle"; ctx.fillText(str, x, y);
+  }
+  function drawHeart(x, y, s, on) {
+    ctx.fillStyle = on ? C.bug : "rgba(255,255,255,.12)";
+    ctx.beginPath(); ctx.moveTo(x, y + s * 0.35);
+    ctx.bezierCurveTo(x - s, y - s * 0.3, x - s * 0.5, y - s, x, y - s * 0.4);
+    ctx.bezierCurveTo(x + s * 0.5, y - s, x + s, y - s * 0.3, x, y + s * 0.35); ctx.fill();
+  }
+
+  function draw() {
+    const g = ctx.createRadialGradient(W / 2, H * 0.35, 0, W / 2, H * 0.35, Math.max(W, H) * 0.8);
+    g.addColorStop(0, C.bg2); g.addColorStop(1, C.bg);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    if (shake > 0) ctx.translate(rand(-shake, shake), rand(-shake, shake));
+
+    for (const it of items) (it.type === "bug" ? drawBug : it.type === "star" ? drawStar : drawCommit)(it);
+    drawPlayer();
+    for (const s of sparks) { ctx.globalAlpha = Math.max(0, s.life); ctx.fillStyle = s.color; ctx.fillRect(s.x - 2, s.y - 2, 4, 4); }
+    for (const p of popups) { ctx.globalAlpha = Math.max(0, p.life); text(p.text, p.x, p.y, 20, p.color); }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    const big = clamp(W * 0.085, 34, 72), small = clamp(W * 0.03, 15, 22);
+    if (state === "play") {
+      text(String(score), 24, 40, 40, C.text, "left");
+      if (mult() > 1) text("×" + mult(), 24, 80, 20, C.star, "left");
+      for (let i = 0; i < 3; i++) drawHeart(W - 30 - i * 32, 40, 12, i < lives);
+    } else if (state === "menu") {
+      text("GİT LAKİ · DAY 1", W / 2, H * 0.3 - big, small * 0.8, C.frame, "center", SERIF, 400);
+      text("Commit Catcher", W / 2, H * 0.3, big, C.text);
+      text("Catch the commits. Dodge the bugs.", W / 2, H * 0.3 + big * 0.9, small, C.muted, "center", SERIF, 400);
+      text("Tap or press Space", W / 2, H * 0.62, small * 1.1, C.frameHi);
+      if (best) text("Best: " + best, W / 2, H * 0.62 + small * 2.2, small, C.muted, "center", SERIF, 400);
+    } else {
+      text("Game over", W / 2, H * 0.3, big, C.text);
+      text(String(score), W / 2, H * 0.3 + big * 1.2, big * 1.3, C.commit);
+      text(score >= best && score > 0 ? "New best!" : "Best: " + best, W / 2, H * 0.3 + big * 2.4, small, C.star, "center", SERIF, 400);
+      text("Tap or press Space to play again", W / 2, H * 0.72, small, C.frameHi);
+    }
+  }
+
+  // ---------- input ----------
+  const keys = { left: false, right: false };
+  function action() {
+    if (state === "play") return;
+    if (state === "over" && performance.now() - overAt < 600) return;   // avoid accidental restart
+    start();
+  }
+  cv.addEventListener("pointerdown", e => { player.target = e.clientX; action(); });
+  cv.addEventListener("pointermove", e => { player.target = e.clientX; });
+  addEventListener("keydown", e => {
+    if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
+    if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
+    if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); action(); }
+  });
+  addEventListener("keyup", e => {
+    if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
+    if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
+  });
+
+  // ---------- loop ----------
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.033, (now - last) / 1000); last = now;
+    update(dt); draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // test hook
+  window.__game = { start, update, get s() { return { state, score, lives, streak, time, items: items.length, W, H }; },
+    player, get items() { return items; } };
+})();
+</script>
+</body>
+</html>

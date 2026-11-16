@@ -1,0 +1,36 @@
+# Commit Catcher
+
+A tiny browser game: catch the commits, dodge the bugs.
+
+**[▶ Play it here](https://fefezey.github.io/commit-catcher/)**
+
+![Commit Catcher gameplay](screenshot.jpg)
+
+## How to play
+
+| Falling thing | What it is | What happens |
+|---|---|---|
+| Green ring | Commit | Catch it: +1 |
+| Gold star | Star | Catch it: +5 |
+| Red bug | Bug | Touch it and you lose a life |
+
+- You have 3 lives.
+- Every 5 commits in a row raises your multiplier (up to ×5). Missing a commit or hitting a bug resets it.
+- Everything gets faster the longer you survive.
+
+**Controls:** move with the mouse, a finger, or the arrow keys. Tap or press Space to start.
+
+## Run it locally
+
+No build step and no dependencies. Open `index.html` in a browser.
+
+## About
+
+Day 1 of [Git Laki](https://github.com/fefezey/git-laki): every day a wheel picks what I ship to GitHub.
+This time it landed on "Browser game".
+
+One HTML file, plain JavaScript and a canvas.
+
+## License
+
+MIT
