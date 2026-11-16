@@ -293,7 +293,7 @@
     const size = clamp(W * 0.06, 28, 54);
     ctx.font = `700 ${size}px ${SERIF}`;
     const w = ctx.measureText(label).width + size * 2.6, h = size * 1.9, x = W / 2 - w / 2;
-    ctx.fillStyle = C.frameHi; ctx.beginPath(); ctx.roundRect(x, y - h / 2, w, h, h / 2); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.roundRect(x, y - h / 2, w, h, h / 2); ctx.fill();
     const tx = x + size * 0.95;
     ctx.fillStyle = C.bg; ctx.beginPath();
     ctx.moveTo(tx - size * 0.22, y - size * 0.34); ctx.lineTo(tx + size * 0.38, y); ctx.lineTo(tx - size * 0.22, y + size * 0.34);
