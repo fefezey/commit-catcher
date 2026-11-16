@@ -86,11 +86,15 @@
     [392, 330, 262].forEach((f, i) => setTimeout(() => beep(f, 0.22, 0.09), i * 140));
   }
 
+  let lastType = "", sameRun = 0;
   function spawn() {
-    const bugChance = clamp(0.22 + time * 0.004, 0.22, 0.42);
+    // A balanced mix from the very first second: about 8% stars, 42% bombs (up to 48% later), the rest faces.
+    const bugChance = clamp(0.42 + time * 0.002, 0.42, 0.48);
     const r = Math.random();
-    // 6% star, then bombs, the rest are the things you catch
-    const type = r < 0.06 ? "star" : r < 0.06 + bugChance ? "bug" : "commit";
+    let type = r < 0.08 ? "star" : r < 0.08 + bugChance ? "bug" : "commit";
+    // never more than two of the same thing in a row, so it can't rain only faces or only bombs
+    if (type === lastType && sameRun >= 2) type = type === "commit" ? "bug" : "commit";
+    sameRun = type === lastType ? sameRun + 1 : 1; lastType = type;
     const size = IMG[type] ? 36               // pictures are drawn bigger so a face is recognisable
       : type === "bug" ? 30 : type === "star" ? 23 : 21;
     const speed = clamp(170 + time * 6, 170, 540) * rand(0.85, 1.2);
