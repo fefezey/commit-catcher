@@ -13,7 +13,6 @@ A tiny browser game: catch the good stuff, dodge the bombs.
 | Green ring | Commit | Catch it: +1 |
 | Gold star | Star | Catch it: +5 |
 | Bomb | Bomb | Touch it and you lose a life |
-| Blue cup | Coffee | Catch it: one life back |
 | Teal arrow | Boost | Catch it: wider paddle for 8 seconds |
 | Orange diamond | Merge conflict | Touch it and your multiplier resets to ×1 |
 

@@ -20,7 +20,7 @@
   // ---------- setup ----------
   const cv = document.getElementById("c"), ctx = cv.getContext("2d");
   const C = { bg: "#0b0a09", bg2: "#1b1715", frame: "#a38a77", frameHi: "#cdb8a6", text: "#f4ece1",
-    muted: "#8b7f78", commit: "#58d68d", star: "#f5c84c", bug: "#ff4a3d", coffee: "#5ab0ff",
+    muted: "#8b7f78", commit: "#58d68d", star: "#f5c84c", bug: "#ff4a3d",
     boost: "#4dd0c8", conflict: "#ff9f43" };
   const SERIF = 'Georgia, "Iowan Old Style", "Times New Roman", serif';
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -91,9 +91,9 @@
   function spawn() {
     const bugChance = clamp(0.22 + time * 0.004, 0.22, 0.42);
     const r = Math.random();
-    // 6% star, 4% coffee, 4% boost, 6% merge conflict, then bugs, the rest are commits
-    const type = r < 0.06 ? "star" : r < 0.10 ? "coffee" : r < 0.14 ? "boost" : r < 0.20 ? "conflict"
-      : r < 0.20 + bugChance ? "bug" : "commit";
+    // 6% star, 4% boost, 6% merge conflict, then bombs, the rest are the things you catch
+    const type = r < 0.06 ? "star" : r < 0.10 ? "boost" : r < 0.16 ? "conflict"
+      : r < 0.16 + bugChance ? "bug" : "commit";
     const size = IMG[type] ? 36               // pictures are drawn bigger so a face is recognisable
       : type === "bug" ? 25 : type === "star" || type === "conflict" ? 23 : 21;
     const speed = clamp(170 + time * 6, 170, 540) * rand(0.85, 1.2);
@@ -161,13 +161,6 @@
           burst(it.x, player.y, C.conflict, 16);
           popups.push({ x: it.x, y: player.y - 16, text: hadMult ? "×1" : "conflict!", life: 1, color: C.conflict });
           beep(200, 0.12, 0.09, "square"); setTimeout(() => beep(150, 0.18, 0.09, "square"), 110);
-        } else if (it.type === "coffee") {
-          // coffee gives one life back (max 3) and keeps the streak alive
-          const healed = lives < 3;
-          lives = Math.min(3, lives + 1);
-          burst(it.x, player.y, C.coffee, 18);
-          popups.push({ x: it.x, y: player.y - 16, text: healed ? "+♥" : "☕", life: 1, color: C.coffee });
-          beep(660, 0.1); setTimeout(() => beep(880, 0.14), 80);
         } else {
           const pts = (it.type === "star" ? 5 : 1) * mult();
           score += pts; streak++;
@@ -230,19 +223,6 @@
     ctx.beginPath(); ctx.arc(0, 5.5, 2, 0, 6.29); ctx.fill();
     ctx.restore();
   }
-  function drawCoffee(it) {
-    const x = it.x, y = it.y, r = it.r;
-    ctx.strokeStyle = C.coffee; ctx.lineWidth = 3; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.arc(x + r * 0.95, y + 1, r * 0.45, -1.2, 1.2); ctx.stroke();          // handle
-    ctx.fillStyle = C.coffee;
-    ctx.beginPath(); ctx.roundRect(x - r * 0.85, y - r * 0.55, r * 1.7, r * 1.5, [2, 2, r * 0.7, r * 0.7]); ctx.fill(); // cup
-    ctx.strokeStyle = "rgba(90,176,255,.55)"; ctx.lineWidth = 2;                                  // steam
-    for (const dx of [-r * 0.35, r * 0.25]) {
-      const sway = Math.sin(it.wob + dx) * 2.5;
-      ctx.beginPath(); ctx.moveTo(x + dx, y - r * 0.8);
-      ctx.quadraticCurveTo(x + dx + sway, y - r * 1.2, x + dx - sway, y - r * 1.6); ctx.stroke();
-    }
-  }
   function drawBomb(it) {             // the thing to dodge: a bomb with a burning fuse
     if (IMG.bug) return drawPicture(it, IMG.bug);
     const r = it.r * 0.82;
@@ -301,7 +281,7 @@
     ctx.save();
     if (shake > 0) ctx.translate(rand(-shake, shake), rand(-shake, shake));
 
-    const DRAW = { commit: drawCommit, star: drawStar, bug: drawBomb, coffee: drawCoffee, boost: drawBoost, conflict: drawConflict };
+    const DRAW = { commit: drawCommit, star: drawStar, bug: drawBomb, boost: drawBoost, conflict: drawConflict };
     for (const it of items) DRAW[it.type](it);
     drawPlayer();
     for (const s of sparks) { ctx.globalAlpha = Math.max(0, s.life); ctx.fillStyle = s.color; ctx.fillRect(s.x - 2, s.y - 2, 4, 4); }
